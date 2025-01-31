@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Important Text Files</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 35px;
+            margin-bottom: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input[type="text"], textarea {
+            width: calc(100% - 20px);
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            margin: 0;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            border-color: #4caf50;
+        }
+
+        textarea {
+            resize: vertical;
+            font-size: 17px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .button-group button {
+            width: 18%;
+            padding: 10px;
+            font-size: 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #saveBtn {
+            background-color: #227CBF;
+            color: white;
+        }
+
+        #removeModeBtn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        #editModeBtn {
+            background-color: #693efe; /* Edit button color */
+            color: white;
+        }
+
+        #editModeBtn.active {
+            background-color: #aa9c92; /* Color after click */
+        }
+
+        #saveBtn:hover {
+            background-color: #1a5a8e;
+        }
+
+        .button-group button:hover {
+            opacity: 0.9;
+        }
+
+        #newFileList {
+            margin-top: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+	#searchInput {
+    width: 30%;
+    height: 24px;
+    margin-left: 14px;
+}
+
+        .file-item {
+            background-color: #E0D800;
+            border: 1px solid #ddd;
+            padding: 15px;
+            width: 20.6%;
+            display: flex;
+            justify-content: space-between;
+            align-items: right;
+            position: relative;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, background-color 0.5s;
+            cursor: pointer;
+        }
+
+        .file-item:hover {
+            transform: translateY(-3px);
+            background-color: #00E034;
+        }
+
+        .file-name {
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            word-wrap: break-word;
+            font-size: 17px;
+        }
+
+        .remove-icon {
+            color: red;
+            cursor: pointer;
+            font-size: 18px;
+            display: none;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+        }
+
+        .file-item.remove-mode .remove-icon {
+            display: block;
+        }
+
+        .sort-options {
+            display: flex;
+            justify-content: Left;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .sort-options select {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 25%;
+        }
+
+        .total-files {
+            font-weight: bold;
+            font-size: 20px;
+            margin-left: 20px;
+        }
+
+        .saved {
+            color: green;
+            font-weight: bold;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* 🔁 icon style */
+        .edit-icon {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 18px;
+            color: #888;
+            display: none; /* Initially hidden */
+        }
+
+        .file-item.edit-mode .edit-icon {
+            display: block;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Your Important Text Files</h1>
+
+        <form id="textForm">
+            <label for="fileName">Heading (File Name):</label>
+            <input type="text" id="fileName" name="fileName" required>
+
+            <label for="fileText">Text:</label>
+            <textarea id="fileText" name="fileText" rows="4" required></textarea>
+
+            <div class="button-group">
+                <button type="submit" id="saveBtn">Save</button>
+                <button type="button" id="editModeBtn">Edit</button> <!-- Edit button -->
+                <button type="button" id="removeModeBtn">Remove</button>
+            </div>
+
+            <div class="sort-options">
+                <select id="sortBySelect">
+    	            <option value="date">Sort By New to Old</option> <!-- पहले 'date' से शुरू होगा -->
+       	            <option value="name">Sort By Name</option> <!-- दूसरे नंबर पर 'name' -->
+                </select>
+                <div class="total-files"><span id="totalFileCount">0</span></div>
+   		 <input type="text" id="searchInput" placeholder="Search files...">
+            </div>
+        </form>
+
+        <div id="newFileList" class="file-list"></div>
+    </div>
+
+    <script>
+        let newFileList = JSON.parse(localStorage.getItem('newFileList')) || [];
+        let removeMode = false;
+        let editMode = false; // Added for edit mode
+        let editIndex = null; // Added to track the index being edited
+        let undoStack = [];
+        let redoStack = [];
+
+        // Handle form submit for save/change
+        document.getElementById('textForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const fileName = document.getElementById('fileName').value;
+            const fileText = document.getElementById('fileText').value;
+            const date = new Date();
+
+            if (editMode && editIndex !== null) {
+                // Update existing file if in edit mode
+                undoStack.push([...newFileList]); // Save the state before the change
+                redoStack = []; // Clear the redo stack after a change
+                newFileList[editIndex].name = fileName;
+                newFileList[editIndex].text = fileText;
+                newFileList[editIndex].date = date; // Update date if needed
+                editMode = false; // Exit edit mode after saving changes
+                editIndex = null;
+                document.getElementById('editModeBtn').classList.remove('active'); // Remove active class
+                document.getElementById('editModeBtn').innerText = 'Edit'; // Reset button text
+                document.getElementById('editModeBtn').style.backgroundColor = '#693efe'; // Reset color
+            } else {
+                const file = {
+                    name: fileName,
+                    text: fileText,
+                    date: date
+                };
+                undoStack.push([...newFileList]); // Save the state before adding the new file
+                redoStack = []; // Clear the redo stack after a change
+                newFileList.push(file);
+            }
+
+            localStorage.setItem('newFileList', JSON.stringify(newFileList));
+            displayFiles(newFileList);
+
+            document.getElementById('textForm').reset();
+        });
+
+        // Display the files in the list
+        function displayFiles(files) {
+            const newFileListDiv = document.getElementById('newFileList');
+            newFileListDiv.innerHTML = '';
+
+            files.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.classList.add('file-item');
+                fileItem.innerHTML = `
+                    <div class="file-name">${file.name}</div>
+                    <div class="remove-icon">&times;</div>
+                    <div class="edit-icon">🔁</div> <!-- 🔁 icon added -->
+                `;
+                fileItem.onclick = function() { handleFileClick(file, index); }; // Modified to handle edit
+                fileItem.querySelector('.remove-icon').onclick = function(e) {
+                    e.stopPropagation();
+                    removeFile(index);
+                };
+                if (removeMode) {
+                    fileItem.classList.add('remove-mode');
+                }
+                if (editMode) {
+                    fileItem.classList.add('edit-mode');
+                }
+
+                newFileListDiv.appendChild(fileItem);
+            });
+
+            document.getElementById('totalFileCount').innerText = files.length;
+        }
+
+        // Handle file click for edit or copy
+        function handleFileClick(file, index) {
+            if (editMode) {
+                document.getElementById('fileName').value = file.name;
+                document.getElementById('fileText').value = file.text;
+                editIndex = index; // Store the index being edited
+                document.getElementById('editModeBtn').classList.add('active'); // Change color on edit
+            } else if (!removeMode) {
+                // Copy file text if not in edit or remove mode
+                navigator.clipboard.writeText(file.text).then(() => {
+                    const fileItems = document.querySelectorAll('.file-name');
+                    fileItems[index].innerText = 'Copied!';
+                    setTimeout(() => {
+                        fileItems[index].innerText = file.name;
+                    }, 1500);
+                });
+            }
+        }
+
+        // Remove file
+        function removeFile(index) {
+            if (confirm('Are you sure you want to delete this file?')) {
+                undoStack.push([...newFileList]); // Save the state before the deletion
+                redoStack = []; // Clear the redo stack after a change
+                newFileList.splice(index, 1);
+                localStorage.setItem('newFileList', JSON.stringify(newFileList));
+                displayFiles(newFileList);
+            }
+        }
+
+        // Toggle remove mode
+        document.getElementById('removeModeBtn').addEventListener('click', function() {
+            removeMode = !removeMode;
+            this.innerText = removeMode ? 'Cancel X Mode' : 'Remove';
+            displayFiles(newFileList);
+        });
+
+	//Search 
+document.getElementById('searchInput').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const filteredFiles = newFileList.filter(file => file.name.toLowerCase().includes(searchTerm));
+    displayFiles(filteredFiles);
+});
+
+
+        // Toggle edit mode
+        document.getElementById('editModeBtn').addEventListener('click', function() {
+            editMode = !editMode;
+            this.innerText = editMode ? 'Cancel Edit Mode' : 'Edit';
+            this.classList.toggle('active', editMode); // Toggle active class
+            displayFiles(newFileList);
+        });
+
+
+        // Undo and Redo actions for all types of changes
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'z') {
+                if (undoStack.length > 0) {
+                    redoStack.push([...newFileList]); // Save the current state before undo
+                    newFileList = undoStack.pop();
+                    displayFiles(newFileList);
+                    localStorage.setItem('newFileList', JSON.stringify(newFileList));
+                }
+            } else if (e.ctrlKey && e.key === 'y') {
+                if (redoStack.length > 0) {
+                    undoStack.push([...newFileList]); // Save the current state before redo
+                    newFileList = redoStack.pop();
+                    displayFiles(newFileList);
+                    localStorage.setItem('newFileList', JSON.stringify(newFileList));
+                }
+            }
+        });
+
+        // Handle sorting by name or date
+        document.getElementById('sortBySelect').addEventListener('change', function() {
+            const sortBy = this.value;
+            if (sortBy === 'name') {
+                newFileList.sort((a, b) => a.name.localeCompare(b.name));
+            } else {
+                newFileList.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }
+            displayFiles(newFileList);
+        });
+
+        displayFiles(newFileList);
+    </script>
+</body>
+</html>
